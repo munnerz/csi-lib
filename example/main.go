@@ -31,15 +31,13 @@ import (
 	"strings"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
-	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/clock"
 
 	"github.com/cert-manager/csi-lib/driver"
+	cmapi "github.com/cert-manager/csi-lib/internal/apis/certmanager/v1"
+	cmclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned"
 	"github.com/cert-manager/csi-lib/manager"
 	"github.com/cert-manager/csi-lib/metadata"
 	"github.com/cert-manager/csi-lib/storage"
@@ -151,13 +149,57 @@ func (k *keygen) generatePrivateKey(meta metadata.Metadata) (crypto.PrivateKey, 
 		return genPrivateKey()
 	}
 
-	pk, err := pki.DecodePrivateKeyBytes(bytes)
+	pk, err := decodePrivateKeyBytes(bytes)
 	if err != nil {
 		// Generate a new key if the existing one cannot be decoded
 		return genPrivateKey()
 	}
 
 	return pk, nil
+}
+
+// DecodePrivateKeyBytes will decode a PEM encoded private key into a crypto.Signer.
+// It supports ECDSA and RSA private keys only. All other types will return err.
+func decodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
+	// decode the private key pem
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return nil, fmt.Errorf("error decoding private key PEM block")
+	}
+
+	switch block.Type {
+	case "PRIVATE KEY":
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing pkcs#8 private key: %s", err.Error())
+		}
+
+		signer, ok := key.(crypto.Signer)
+		if !ok {
+			return nil, fmt.Errorf("error parsing pkcs#8 private key: invalid key type")
+		}
+		return signer, nil
+	case "EC PRIVATE KEY":
+		key, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing ecdsa private key: %s", err.Error())
+		}
+
+		return key, nil
+	case "RSA PRIVATE KEY":
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing rsa private key: %s", err.Error())
+		}
+
+		err = key.Validate()
+		if err != nil {
+			return nil, fmt.Errorf("rsa private key failed validation: %s", err.Error())
+		}
+		return key, nil
+	default:
+		return nil, fmt.Errorf("unknown private key type: %s", block.Type)
+	}
 }
 
 func generateRequest(meta metadata.Metadata) (*manager.CertificateRequestBundle, error) {
@@ -173,7 +215,7 @@ func generateRequest(meta metadata.Metadata) (*manager.CertificateRequestBundle,
 	dnsNames := strings.Split(meta.VolumeContext[DNSNamesKey], ",")
 	commonName := meta.VolumeContext[CommonNameKey]
 
-	duration := cmapi.DefaultCertificateDuration
+	duration := time.Hour * 24 * 90 // copied from https://github.com/cert-manager/cert-manager/blob/914944c020d80628dbf5eb1bb63e5444ac8b89da/pkg/apis/certmanager/v1/const.go#L26
 	if durStr, ok := meta.VolumeContext[DurationKey]; ok {
 		duration, err = time.ParseDuration(durStr)
 		if err != nil {
@@ -204,7 +246,7 @@ func generateRequest(meta metadata.Metadata) (*manager.CertificateRequestBundle,
 		Namespace: namespace,
 		Duration:  duration,
 		Usages:    keyUsagesFromAttributes(meta.VolumeContext[KeyUsagesKey]),
-		IssuerRef: cmmeta.ObjectReference{
+		IssuerRef: cmapi.ObjectReference{
 			Name:  meta.VolumeContext[IssuerNameKey],
 			Kind:  meta.VolumeContext[IssuerKindKey],
 			Group: meta.VolumeContext[IssuerGroupKey],
