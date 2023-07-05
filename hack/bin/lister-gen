@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2021 The cert-manager Authors.
+# Copyright 2023 The cert-manager Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/.."
-cd "$ROOT_DIR"
+set -o errexit
+set -o nounset
+set -o pipefail
 
-./hack/verify-gofmt.sh
-./hack/verify-boilerplate.sh
-VERIFY_ONLY=true ./hack/k8s-codegen.sh
+REPO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../" > /dev/null && pwd )"
+source "${REPO_ROOT}/hack/bin/lib.sh"
 
-go test -race ./...
+exec_go_tool lister-gen k8s.io/code-generator/cmd/lister-gen v0.27.2 "$@"
