@@ -27,11 +27,6 @@ import (
 	"sync"
 	"time"
 
-	apiutil "github.com/cert-manager/cert-manager/pkg/api/util"
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
-	cminformers "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions"
-	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +39,10 @@ import (
 
 	internalapi "github.com/cert-manager/csi-lib/internal/api"
 	internalapiutil "github.com/cert-manager/csi-lib/internal/api/util"
+	cmapi "github.com/cert-manager/csi-lib/internal/apis/certmanager/v1"
+	cmclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned"
+	cminformers "github.com/cert-manager/csi-lib/internal/client/informers/externalversions"
+	cmlisters "github.com/cert-manager/csi-lib/internal/client/listers/certmanager/v1"
 	"github.com/cert-manager/csi-lib/metadata"
 	"github.com/cert-manager/csi-lib/storage"
 )
@@ -357,15 +356,15 @@ func (m *Manager) issue(ctx context.Context, volumeID string) error {
 		}
 
 		// Handle cases where the request has been explicitly denied
-		if apiutil.CertificateRequestIsDenied(updatedReq) {
-			cond := apiutil.GetCertificateRequestCondition(updatedReq, cmapi.CertificateRequestConditionDenied)
+		if internalapiutil.CertificateRequestIsDenied(updatedReq) {
+			cond := internalapiutil.GetCertificateRequestCondition(updatedReq, cmapi.CertificateRequestConditionDenied)
 			// if a CR has been explicitly denied, we DO stop execution.
 			// there may be a case to be made that we could continue anyway even if the issuer ignores the approval
 			// status, however these cases are likely few and far between and this makes denial more responsive.
 			return false, fmt.Errorf("request %q has been denied by the approval plugin: %s", updatedReq.Name, cond.Message)
 		}
 
-		isApproved := apiutil.CertificateRequestIsApproved(updatedReq)
+		isApproved := internalapiutil.CertificateRequestIsApproved(updatedReq)
 		if !isApproved {
 			lastFailureReason = fmt.Sprintf("request %q has not yet been approved by approval plugin", updatedReq.Name)
 			// we don't stop execution here, as some versions of cert-manager (and some external issuer plugins)
@@ -374,7 +373,7 @@ func (m *Manager) issue(ctx context.Context, volumeID string) error {
 			// and use the issued certificate despite not being approved.
 		}
 
-		readyCondition := apiutil.GetCertificateRequestCondition(updatedReq, cmapi.CertificateRequestConditionReady)
+		readyCondition := internalapiutil.GetCertificateRequestCondition(updatedReq, cmapi.CertificateRequestConditionReady)
 		if readyCondition == nil {
 			// only overwrite the approval failure message if the request is actually approved
 			// otherwise we may hide more useful information from the user by accident.

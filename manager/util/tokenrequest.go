@@ -21,9 +21,9 @@ import (
 	"errors"
 	"fmt"
 
-	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	"k8s.io/client-go/rest"
 
+	cmclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned"
 	"github.com/cert-manager/csi-lib/manager"
 	"github.com/cert-manager/csi-lib/metadata"
 )

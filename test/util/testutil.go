@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	cmapi "github.com/cert-manager/csi-lib/internal/apis/certmanager/v1"
+	cmclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned"
 )
 
 func waitAndGetOneCertificateRequestInNamespace(ctx context.Context, client cmclient.Interface, ns string) (*cmapi.CertificateRequest, error) {
@@ -61,7 +61,7 @@ func IssueOneRequest(t *testing.T, client cmclient.Interface, namespace string, 
 		csr := req.DeepCopy()
 		csr.Status.Conditions = append(req.Status.Conditions, cmapi.CertificateRequestCondition{
 			Type:    cmapi.CertificateRequestConditionReady,
-			Status:  cmmeta.ConditionTrue,
+			Status:  metav1.ConditionTrue,
 			Reason:  cmapi.CertificateRequestReasonIssued,
 			Message: "Issued by test",
 		})
@@ -129,7 +129,7 @@ func IssueAllRequests(t *testing.T, client cmclient.Interface, namespace string,
 			csr := req.DeepCopy()
 			csr.Status.Conditions = append(req.Status.Conditions, cmapi.CertificateRequestCondition{
 				Type:    cmapi.CertificateRequestConditionReady,
-				Status:  cmmeta.ConditionTrue,
+				Status:  metav1.ConditionTrue,
 				Reason:  cmapi.CertificateRequestReasonIssued,
 				Message: "Issued by test",
 			})

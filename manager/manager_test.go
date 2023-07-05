@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,6 +21,7 @@ import (
 
 	internalapi "github.com/cert-manager/csi-lib/internal/api"
 	internalapiutil "github.com/cert-manager/csi-lib/internal/api/util"
+	cmapi "github.com/cert-manager/csi-lib/internal/apis/certmanager/v1"
 	"github.com/cert-manager/csi-lib/metadata"
 	"github.com/cert-manager/csi-lib/storage"
 	testutil "github.com/cert-manager/csi-lib/test/util"
@@ -143,16 +142,16 @@ func TestManager_PropagatesRequestConditionMessages(t *testing.T) {
 			switch test.approved {
 			case "":
 			case "approved":
-				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionApproved, Status: cmmeta.ConditionTrue, Reason: "SetByTest", Message: "approved"})
+				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionApproved, Status: metav1.ConditionTrue, Reason: "SetByTest", Message: "approved"})
 			case "denied":
-				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionDenied, Status: cmmeta.ConditionTrue, Reason: "SetByTest", Message: "denied"})
+				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionDenied, Status: metav1.ConditionTrue, Reason: "SetByTest", Message: "denied"})
 			}
 			switch test.ready {
 			case "":
 			case "pending":
-				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionReady, Status: cmmeta.ConditionFalse, Reason: cmapi.CertificateRequestReasonPending, Message: "pending"})
+				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionReady, Status: metav1.ConditionFalse, Reason: cmapi.CertificateRequestReasonPending, Message: "pending"})
 			case "failed":
-				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionReady, Status: cmmeta.ConditionFalse, Reason: cmapi.CertificateRequestReasonFailed, Message: "failed"})
+				conditions = append(conditions, cmapi.CertificateRequestCondition{Type: cmapi.CertificateRequestConditionReady, Status: metav1.ConditionFalse, Reason: cmapi.CertificateRequestReasonFailed, Message: "failed"})
 			}
 			// Automatically set the request to be approved & pending once created
 			go testutil.SetCertificateRequestConditions(ctx, t, opts.Client, defaultTestNamespace, conditions...)

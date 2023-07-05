@@ -23,8 +23,6 @@ import (
 	"net"
 	"testing"
 
-	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
-	fakeclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/fake"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/go-logr/logr"
 	logrtesting "github.com/go-logr/logr/testing"
@@ -34,6 +32,8 @@ import (
 	"k8s.io/utils/clock"
 
 	"github.com/cert-manager/csi-lib/driver"
+	cmclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned"
+	fakeclient "github.com/cert-manager/csi-lib/internal/client/clientset/versioned/fake"
 	"github.com/cert-manager/csi-lib/manager"
 	"github.com/cert-manager/csi-lib/metadata"
 	"github.com/cert-manager/csi-lib/storage"
